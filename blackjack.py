@@ -99,10 +99,10 @@ def main():
 
 
 
-    print("Dealer has {}\n".format(dealer_hand))
+    print("Dealer has {}\n".format(dealer_hand))#fix to make one card up, one card down
     print("Player has {}\n".format(player_hand))
 
-    while sum(player_hand_values) < 21:
+    while sum(player_hand_values) < 21:#might add player_turn and dealer_turn functions; maybe use hand class?
         for card in player_hand:
             player_hand_values.append(Card.numbers[card.number])
             for value in player_hand_values:
@@ -114,7 +114,7 @@ def main():
                     player_hand_values.remove(value)
         choice = input("Would you like to [S]tand or [H]it? ").lower()
         if choice == 's'.lower(): #dealer turn
-            while sum(dealer_hand_values) < 17:
+            while sum(dealer_hand_values) < 17:#complete dealer turn
                 for card in dealer_hand:
                     dealer_hand_values.append(Card.numbers[card.number])
                     for value in dealer_hand_values:
