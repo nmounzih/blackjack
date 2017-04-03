@@ -1,5 +1,4 @@
 import random
-import os
 
 
 class UnknownSuitError(Exception):
@@ -11,16 +10,11 @@ class Card:
     suits = ["Hearts", "Diamonds", "Clubs", "Spades"]
 
     def __init__(self, number, suit):
-        if isinstance(suit, str):
-            try:
-                suit = Card.suits.index(suit)
-            except:
-                raise UnknownSuitError
         self.number = number
         self.suit = suit
 
     def __repr__(self):
-        return "{} of {}".format(str(Card.numbers[self.number]), Card.suits[self.suit])
+        return "{} of {}".format(Card.numbers[self.number], Card.suits[self.suit])
 
     def __str__(self):
         return "{} {}".format(Card.numbers[self.number], Card.suits[self.suit])
@@ -28,11 +22,18 @@ class Card:
     def __eq__(self, other):
         return self.number == other.number and self.suit == other.suit
 
+    def value(self):
+        if self.number > 8:
+            return 10
+        if self.number == 0:
+            return 11
+        return self.number + 1
+
 
 class Deck:
-
-    def __init__(self):
-        self.cards = [Card(c%13, c//13) for c in range(52)]
+    def __init__(self, number=1):
+        self.cards = [Card(c % 13, c//13) for c in range(52)] * number
+        self.current_place = 0
 
     def __repr__(self):
         return str(self.cards)
@@ -41,105 +42,92 @@ class Deck:
         return random.shuffle(self.cards)
 
     def deal_card(self):
-        return self.cards.pop()
+        if self.current_place >= len(self.cards):
+            self.shuffle()
+            self.current_place = 0
+        top_card = self.cards[self.current_place]
+        self.current_place += 1
+        return top_card
 
-    # def start_deal(self):
-    #     for x in range(2):
-    #         return self.cards.pop()
 
-# deck = Deck()
-# deck.shuffle()
-# for card in deck.cards:
-#     print(card.number, end=":")
-#     print(card.suit)
+class BlackjackPlayer:
+    def __init__(self):
+        self.hand = []
 
-# class Hand:
-#
-#     def __init__(self, player):
-#         self.player = player
-#         self.cards = [] #how to use Card class here?
-#
-#     def draw_card(self):
-#         global deck #took this from stackexchange... unsure how to do without?
-#         take_card = deck.deal_card()
-#         self.cards.append(take_card)
+    def __repr__(self):
+        return str(self.hand)
 
-def clear():
-    os.system("clear")
+    def clear_hand(self):
+        self.hand = []
 
-# def player_turn():
-#
-#         player_turn()
+    def take_card(self, card):
+        self.hand.append(card)
 
-#def dealer_turn():
+    def score(self):
+        total = 0
+        ace_count = 0
+        for card in self.hand:
+            total += card.value()
+            if card.value() == 11:
+                ace_count += 1
+        while total > 21 and ace_count > 0:
+            total -= 10
+            ace_count -= 1
+        return total
 
+
+class Dealer(BlackjackPlayer):
+    def hit(self):
+        if self.score() >= 17:
+            return False
+        return True
+
+
+class Player(BlackjackPlayer):
+    def hit(self):
+        print(self.hand)
+        query = 'You have {} points, would you like to hit or stand? h/s '
+        return 'h' == input(query.format(self.score()))
+
+
+class Game:
+    def __init__(self, player, dealer):
+        self.dealer = dealer
+        self.player = player
+
+    def play_hand(self):
+        deck = Deck(2)
+        deck.shuffle()
+        self.player.clear_hand()
+        self.dealer.clear_hand()
+
+        for _ in range(2):
+            self.dealer.take_card(deck.deal_card())
+            self.player.take_card(deck.deal_card())
+
+        while self.player.score() < 21 and self.player.hit():
+            self.player.take_card(deck.deal_card())
+
+        while self.dealer.hit():
+            self.dealer.take_card(deck.deal_card())
+
+        print("Player: {}\nDealer: {}".format(self.player, self.dealer))
+
+        if self.player.score() > 21:
+            print("\nPlayer busts. Game over.\n")
+        elif self.dealer.score() > 21:
+            print("\nDealer busts. Game over.\n")
+        elif self.player.score() > self.dealer.score():
+            print("\nPlayer wins.\n")
+        else:
+            print("\nHouse wins.\n")
 
 
 def main():
     print("\n~ Welcome to the BELLAGIO ~ ")
-    start = input(("Ready for some blackjack?\n"))
-    deck = Deck()
-    deck.shuffle()
-    player_hand = []
-    dealer_hand = []
-    player_hand_values = []
-    dealer_hand_values = []
-
-    next_card = deck.deal_card()# player card one
-    player_hand.append(next_card)
-
-    next_card = deck.deal_card()# player card two
-    player_hand.append(next_card)
-
-    next_card = deck.deal_card()# dealer card one
-    dealer_hand.append(next_card)
-
-    next_card = deck.deal_card()# dealer card two
-    dealer_hand.append(next_card)
-
-
-
-    print("Dealer has {}\n".format(dealer_hand))#fix to make one card up, one card down
-    print("Player has {}\n".format(player_hand))
-
-    while sum(player_hand_values) < 21:#might add player_turn and dealer_turn functions; maybe use hand class?
-        for card in player_hand:
-            player_hand_values.append(Card.numbers[card.number])
-            for value in player_hand_values:
-                if value == 'King' or value == 'Queen' or value == 'Jack':
-                    player_hand_values.append(10)
-                    player_hand_values.remove(value)
-                elif value == 'Ace':
-                    player_hand_values.append(1)
-                    player_hand_values.remove(value)
-        choice = input("Would you like to [S]tand or [H]it? ").lower()
-        if choice == 's'.lower(): #dealer turn
-            while sum(dealer_hand_values) < 17:#complete dealer turn
-                for card in dealer_hand:
-                    dealer_hand_values.append(Card.numbers[card.number])
-                    for value in dealer_hand_values:
-                        if value == 'King' or value == 'Queen' or value == 'Jack':
-                            dealer_hand_values.append(10)
-                            dealer_hand_values.remove(value)
-                        elif value == 'Ace':
-                            dealer_hand_values.append(1)
-                            dealer_hand_values.remove(value)
-                next_card = deck.deal_card()
-                dealer_hand.append(next_card)
-                print("Dealer now has {}".format(dealer_hand))
-        else:
-            next_card = deck.deal_card()
-            player_hand.append(next_card)
-            print("Player now has {}".format(player_hand))
-    if sum(player_hand_values) > 21:
-        print("\nBUST. The house wins.")
-        play_again = input("\nPlay again? Y/n ").lower()
-        if play_again != 'n':
-            clear()
-            main()
-
-
-
+    game = Game(Player(), Dealer())
+    while 'y' == input("Ready for some blackjack? [y/n]\n"):
+        game.play_hand()
 
 
 if __name__ == '__main__':
